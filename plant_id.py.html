@@ -1,0 +1,129 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name=claude:viewport-fit-sides content=cover><style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}</style><style>.md-table{overflow-x:auto}@media print{.md-table{overflow-x:visible}}</style><style>:root{color-scheme:light dark;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}}:root[data-theme="dark"]{color-scheme:dark;--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}:root[data-theme="light"]{color-scheme:light}@media print{:root,:root[data-theme="dark"]{color-scheme:light;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}}body{background:var(--md-bg);color:var(--md-text);max-width:720px;margin:0 auto;padding:32px;display:flex;flex-direction:column;gap:10px;font:14px/1.55 -apple-system,BlinkMacSystemFont,'SF Pro','Segoe UI',sans-serif;overflow-wrap:break-word}body>:first-child{margin-top:0}h1,h2,h3,h4,h5,h6{margin:6px 0 0;line-height:1.25;font-weight:600;text-wrap:balance}h1{font-size:1.35em}h2{font-size:1.15em;color:var(--md-muted)}h3,h4,h5,h6{font-size:1em}p,ul,ol,blockquote,table,pre,hr{margin:0}strong{font-weight:600}a{color:var(--md-link);text-decoration:none}a:hover{text-decoration:underline}ul,ol{display:flex;flex-direction:column;gap:6px;padding-left:22px}ul{list-style:disc}ol{list-style:decimal}:is(li,td,th)>*+:is(p,ul,ol,blockquote){margin-top:6px}blockquote{display:flex;flex-direction:column;gap:10px;border-left:2px solid var(--md-rule);padding-left:10px;color:var(--md-muted)}:not(pre)>code{background:var(--md-fill);padding:1px 3px;border-radius:4px;font:.92em 'SF Mono',ui-monospace,Menlo,Consolas,monospace}a>code{background:none;color:inherit}pre{background:var(--md-fill);padding:10px 12px;border-radius:6px;overflow-x:auto;font:12px/1.5 'SF Mono',ui-monospace,Menlo,Consolas,monospace;margin-block:4px}pre code{background:none;padding:0;font:inherit}table{width:100%;border-collapse:separate;border-spacing:2px;font:inherit}th,td{padding:6px 8px;border-radius:3px;text-align:left;vertical-align:top}th{background:var(--md-fill-strong);font-weight:600}td{background:var(--md-fill)}:is(th,td) :not(pre)>code{background:transparent}hr{border:0;border-top:1px solid var(--md-rule-strong);margin-block:10px}img{max-width:100%;height:auto;border-radius:4px}</style>
+</head><body>
+<pre><code class="language-python">&#34;&#34;&#34;
+Определитель растений + советы по уходу (Streamlit + Claude API)
+
+Установка:
+    pip install streamlit anthropic pillow
+
+Запуск:
+    export ANTHROPIC_API_KEY=&#34;ваш_ключ&#34;      # Windows: set ANTHROPIC_API_KEY=ваш_ключ
+    streamlit run plant_id.py
+&#34;&#34;&#34;
+
+import base64
+import io
+import json
+import os
+
+import anthropic
+import streamlit as st
+from PIL import Image
+
+MODEL = &#34;claude-sonnet-5-5&#34;
+
+PROMPT = &#34;&#34;&#34;Ты — ботаник и эксперт по уходу за растениями. Определи растение на фото.
+Верни ТОЛЬКО JSON без markdown и пояснений, на русском языке:
+{&#34;is_plant&#34;: true, &#34;name&#34;: &#34;русское название&#34;, &#34;latin&#34;: &#34;латинское название&#34;,
+ &#34;confidence&#34;: &#34;высокая|средняя|низкая&#34;, &#34;about&#34;: &#34;1-2 предложения о растении&#34;,
+ &#34;care&#34;: {&#34;light&#34;: &#34;свет&#34;, &#34;water&#34;: &#34;полив и частота&#34;,
+          &#34;climate&#34;: &#34;температура и влажность&#34;, &#34;soil&#34;: &#34;грунт и пересадка&#34;,
+          &#34;feed&#34;: &#34;подкормка&#34;},
+ &#34;problems&#34;: [&#34;типичные проблемы и признаки&#34;],
+ &#34;toxic&#34;: &#34;токсичность для кошек, собак и людей&#34;,
+ &#34;alt&#34;: [&#34;1-2 похожих варианта, если уверенность не высокая&#34;],
+ &#34;visible_issues&#34;: &#34;проблемы, заметные на фото (или пустая строка)&#34;}
+Если на фото нет растения: {&#34;is_plant&#34;: false}.&#34;&#34;&#34;
+
+
+def prepare_image(file) -&gt; str:
+    &#34;&#34;&#34;Уменьшает фото до 1024 px и возвращает base64 JPEG.&#34;&#34;&#34;
+    img = Image.open(file).convert(&#34;RGB&#34;)
+    img.thumbnail((1024, 1024))
+    buf = io.BytesIO()
+    img.save(buf, format=&#34;JPEG&#34;, quality=85)
+    return base64.standard_b64encode(buf.getvalue()).decode()
+
+
+def identify(image_b64: str) -&gt; dict:
+    client = anthropic.Anthropic()  # ключ берётся из ANTHROPIC_API_KEY
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=1500,
+        messages=[{
+            &#34;role&#34;: &#34;user&#34;,
+            &#34;content&#34;: [
+                {&#34;type&#34;: &#34;image&#34;,
+                 &#34;source&#34;: {&#34;type&#34;: &#34;base64&#34;, &#34;media_type&#34;: &#34;image/jpeg&#34;, &#34;data&#34;: image_b64}},
+                {&#34;type&#34;: &#34;text&#34;, &#34;text&#34;: PROMPT},
+            ],
+        }],
+    )
+    text = response.content[0].text.replace(&#34;```json&#34;, &#34;&#34;).replace(&#34;```&#34;, &#34;&#34;).strip()
+    return json.loads(text[text.index(&#34;{&#34;): text.rindex(&#34;}&#34;) + 1])
+
+
+def show_result(d: dict) -&gt; None:
+    if not d.get(&#34;is_plant&#34;):
+        st.warning(&#34;Растение на фото не найдено. Снимите крупнее и при хорошем свете.&#34;)
+        return
+
+    st.header(d.get(&#34;name&#34;, &#34;Неизвестно&#34;))
+    st.caption(f&#34;*{d.get(&#39;latin&#39;, &#39;&#39;)}* · Уверенность: {d.get(&#39;confidence&#39;, &#39;—&#39;)}&#34;)
+    st.write(d.get(&#34;about&#34;, &#34;&#34;))
+    if d.get(&#34;alt&#34;):
+        st.write(&#34;Возможно также: &#34; + &#34;, &#34;.join(d[&#34;alt&#34;]))
+
+    care = d.get(&#34;care&#34;, {})
+    st.subheader(&#34;Уход&#34;)
+    st.markdown(
+        f&#34;☀️ **Свет:** {care.get(&#39;light&#39;, &#39;—&#39;)}\n\n&#34;
+        f&#34;💧 **Полив:** {care.get(&#39;water&#39;, &#39;—&#39;)}\n\n&#34;
+        f&#34;🌡️ **Температура и влажность:** {care.get(&#39;climate&#39;, &#39;—&#39;)}\n\n&#34;
+        f&#34;🪴 **Грунт и пересадка:** {care.get(&#39;soil&#39;, &#39;—&#39;)}\n\n&#34;
+        f&#34;🧪 **Подкормка:** {care.get(&#39;feed&#39;, &#39;—&#39;)}&#34;
+    )
+
+    st.subheader(&#34;Частые проблемы&#34;)
+    for p in d.get(&#34;problems&#34;, []):
+        st.markdown(f&#34;⚠️ {p}&#34;)
+    if d.get(&#34;visible_issues&#34;):
+        st.info(&#34;🔍 На вашем фото: &#34; + d[&#34;visible_issues&#34;])
+    st.markdown(f&#34;🐾 **Токсичность:** {d.get(&#39;toxic&#39;, &#39;—&#39;)}&#34;)
+
+
+def main() -&gt; None:
+    st.set_page_config(page_title=&#34;Определитель растений&#34;, page_icon=&#34;🌿&#34;)
+    st.title(&#34;🌿 Определитель растений&#34;)
+    st.write(&#34;Сфотографируйте растение — получите название и советы по уходу.&#34;)
+
+    if not os.environ.get(&#34;ANTHROPIC_API_KEY&#34;):
+        st.error(&#34;Не задана переменная окружения ANTHROPIC_API_KEY.&#34;)
+        st.stop()
+
+    source = st.radio(&#34;Источник фото&#34;, [&#34;Загрузить файл&#34;, &#34;Камера&#34;], horizontal=True)
+    if source == &#34;Камера&#34;:
+        photo = st.camera_input(&#34;Снимок растения&#34;)
+    else:
+        photo = st.file_uploader(&#34;Фото растения&#34;, type=[&#34;jpg&#34;, &#34;jpeg&#34;, &#34;png&#34;, &#34;webp&#34;])
+
+    if photo:
+        st.image(photo, use_container_width=True)
+        if st.button(&#34;Определить растение&#34;, type=&#34;primary&#34;, use_container_width=True):
+            with st.spinner(&#34;Анализирую…&#34;):
+                try:
+                    result = identify(prepare_image(photo))
+                except anthropic.APIError as e:
+                    st.error(f&#34;Ошибка API: {e}&#34;)
+                    return
+                except (ValueError, json.JSONDecodeError):
+                    st.error(&#34;Не удалось разобрать ответ. Попробуйте ещё раз.&#34;)
+                    return
+            show_result(result)
+
+
+if __name__ == &#34;__main__&#34;:
+    main()
+</code></pre>
+
+</body></html>
